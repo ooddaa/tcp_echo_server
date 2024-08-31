@@ -14,10 +14,11 @@ defmodule TCPEchoServer.Acceptor do
 
     listen_opts = [
       :binary,
-      active: true,
+      active: :once,
       exit_on_close: false,
       reuseaddr: true,
-      backlog: 25
+      backlog: 25,
+      packet: :line
     ]
 
     case :gen_tcp.listen(port, listen_opts) do

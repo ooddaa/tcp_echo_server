@@ -8,7 +8,7 @@ defmodule TCPEchoServer.Connection do
     GenServer.start_link(__MODULE__, socket)
   end
 
-  defstruct socket: nil, buffer: <<>>
+  defstruct socket: nil
 
   @impl true
   def init(socket) do
@@ -18,12 +18,9 @@ defmodule TCPEchoServer.Connection do
   @impl true
   def handle_info(msg, state)
 
-  def handle_info({:tcp, socket, data}, %__MODULE__{socket: socket} = state) do
-    state =
-      state.buffer
-      |> update_in(&(&1 <> data))
-      |> handle_new_data()
-
+  def handle_info({:tcp, socket, line}, %__MODULE__{socket: socket} = state) do
+    :ok = :inet.setopts(socket, active: :once)
+    :ok = :gen_tcp.send(socket, line)
     {:noreply, state}
   end
 
@@ -34,19 +31,5 @@ defmodule TCPEchoServer.Connection do
   def handle_info({:tcp_error, socket, reason}, %__MODULE__{socket: socket} = state) do
     Logger.error("TCP socket error: #{inspect(reason)}")
     {:stop, :normal, state}
-  end
-
-  defp handle_new_data(%__MODULE__{} = state) do
-    case String.split(state.buffer, "\n", parts: 2) do
-      [line, rest] ->
-        :gen_tcp.send(state.socket, line <> "\n")
-
-        state.buffer
-        |> put_in(rest)
-        |> handle_new_data()
-
-      _other ->
-        state
-    end
   end
 end
